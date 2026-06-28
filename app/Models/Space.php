@@ -13,7 +13,7 @@ class Space extends Model
     protected $fillable = [
         'name',
         'location',
-        'space_type',
+        'space_type_id',
         'price_per_hour',
         'capacity',
         'description',
@@ -42,5 +42,10 @@ class Space extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function spaceType()
+    {
+        return $this->belongsTo(SpaceType::class);
     }
 }

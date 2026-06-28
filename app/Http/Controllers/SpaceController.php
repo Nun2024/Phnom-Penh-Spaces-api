@@ -20,11 +20,22 @@ class SpaceController extends Controller
         }
 
         if ($request->has('space_type')) {
-            $query->where('space_type', $request->input('space_type'));
+            $spaceTypeInput = $request->input('space_type');
+            $query->whereHas('spaceType', function($q) use ($spaceTypeInput) {
+                $q->where('name', $spaceTypeInput);
+            });
         }
 
         if ($request->has('status')) {
             $query->where('status', $request->input('status'));
+        }
+
+        if ($request->has('limit')) {
+            $query->limit($request->input('limit'));
+        }
+
+        if ($request->has('offset')) {
+            $query->offset($request->input('offset'));
         }
 
         return response()->json($query->get(), 200);
@@ -39,6 +50,12 @@ class SpaceController extends Controller
         }
 
         return response()->json($space, 200);
+    }
+
+    public function bookings($id)
+    {
+        $bookings = \App\Models\Booking::where('space_id', $id)->get(['selected_slots']);
+        return response()->json($bookings, 200);
     }
 
     public function store(Request $request)
