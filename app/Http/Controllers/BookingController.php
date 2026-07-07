@@ -15,7 +15,9 @@ class BookingController extends Controller
         if ($user && $user->role === 'ADMIN') {
             $bookings = Booking::with('space')->get();
         } elseif ($user) {
-            $bookings = Booking::where('user_id', $user->id)->with('space')->get();
+            $bookings = Booking::where('user_id', $user->id)
+                               ->orWhere('client_email', $user->email)
+                               ->with('space')->get();
         } else {
             // Guest or public requests (should be protected by middleware normally, but support list fallback)
             $bookings = Booking::with('space')->get();

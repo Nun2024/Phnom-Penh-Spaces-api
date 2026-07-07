@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\SpaceTypeController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\DashboardController;
 
 // Authentication routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -36,4 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Booking management (view and update)
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
+    
+    // Dashboard stats
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 });
