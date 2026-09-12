@@ -22,8 +22,10 @@ class DashboardController extends Controller
             $grossRevenue = Booking::sum('total_price'); // Fallback if payment_status isn't strictly used
         }
 
-        // 3. Occupancy Rate (Placeholder matching UI for now)
-        $occupancyRate = 78; 
+        // 3. Occupancy Rate (Spaces booked today / Total spaces)
+        $totalSpaces = Space::count();
+        $spacesBookedToday = Booking::whereDate('booking_date', today())->distinct('space_id')->count('space_id');
+        $occupancyRate = $totalSpaces > 0 ? round(($spacesBookedToday / $totalSpaces) * 100) : 0;
 
         // 4. Upcoming Reservations (recent 10 bookings)
         $upcomingReservations = Booking::with('space', 'user')
@@ -52,6 +54,74 @@ class DashboardController extends Controller
             'occupancyRate' => $occupancyRate,
             'upcomingReservations' => $upcomingReservations,
             'weeklyRevenue' => $weeklyRevenue
+        ], 200);
+    }
+
+    public function reservations(Request $request)
+    {
+        // Fetch all bookings with related space and user information
+        $reservations = Booking::with('space', 'user')
+                               ->orderBy('booking_date', 'desc')
+                               ->where('payment_status', 'unpaid')
+                               ->get();
+
+        return response()->json([
+            'reservations' => $reservations
+        ], 200);
+    }
+
+    public function revenue(Request $request)
+    {
+        // Calculate total revenue from paid bookings
+        $totalRevenue = Booking::where('payment_status', 'paid')->sum('total_price');
+
+        // Calculate total service fees collected
+        $totalServiceFees = Booking::where('payment_status', 'paid')->sum('service_fee');
+
+        return response()->json([
+            'totalRevenue' => $totalRevenue,
+            'totalServiceFees' => $totalServiceFees
+        ], 200);
+    }
+
+    public function weeklyReport(Request $request)
+    {
+        $startOfWeek = now()->startOfWeek();
+        $endOfWeek = now()->endOfWeek();
+
+        $bookings = Booking::with('space', 'user')
+                           ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                           ->orderBy('created_at', 'desc')
+                           ->get();
+
+        $totalRevenue = $bookings->where('payment_status', 'paid')->sum('total_price');
+        
+        $dailyBreakdown = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = $startOfWeek->copy()->addDays($i);
+            $dayName = $date->format('D');
+            
+            $dayBookings = $bookings->filter(function ($booking) use ($date) {
+                return $booking->created_at->format('Y-m-d') === $date->format('Y-m-d');
+            });
+            
+            $dayRevenue = $dayBookings->where('payment_status', 'paid')->sum('total_price');
+
+            $dailyBreakdown[] = [
+                'day' => $dayName,
+                'date' => $date->format('Y-m-d'),
+                'revenue' => (float)$dayRevenue,
+                'bookings_count' => $dayBookings->count(),
+            ];
+        }
+
+        return response()->json([
+            'week_start' => $startOfWeek->format('Y-m-d'),
+            'week_end' => $endOfWeek->format('Y-m-d'),
+            'total_revenue' => $totalRevenue,
+            'total_bookings' => $bookings->count(),
+            'daily_breakdown' => $dailyBreakdown,
+            'bookings' => $bookings
         ], 200);
     }
 }

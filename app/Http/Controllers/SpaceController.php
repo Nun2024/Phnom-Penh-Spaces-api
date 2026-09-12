@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSpaceRequest;
+use App\Http\Requests\UpdateSpaceRequest;
 use App\Models\Space;
 use Illuminate\Http\Request;
 
@@ -9,36 +11,30 @@ class SpaceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Space::query();
+        $spaces = Space::query()
+            ->when($request->search, function ($query, $search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->space_type, function ($query, $spaceTypeInput) {
+                $query->whereHas('spaceType', function($q) use ($spaceTypeInput) {
+                    $q->where('name', $spaceTypeInput);
+                });
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->when($request->limit, function ($query, $limit) {
+                $query->limit($limit);
+            })
+            ->when($request->offset, function ($query, $offset) {
+                $query->offset($offset);
+            })
+            ->get();
 
-        if ($request->has('search')) {
-            $search = $request->input('search');
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('space_type')) {
-            $spaceTypeInput = $request->input('space_type');
-            $query->whereHas('spaceType', function($q) use ($spaceTypeInput) {
-                $q->where('name', $spaceTypeInput);
-            });
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->has('limit')) {
-            $query->limit($request->input('limit'));
-        }
-
-        if ($request->has('offset')) {
-            $query->offset($request->input('offset'));
-        }
-
-        return response()->json($query->get(), 200);
+        return response()->json($spaces, 200);
     }
 
     public function show($id)
@@ -58,24 +54,9 @@ class SpaceController extends Controller
         return response()->json($bookings, 200);
     }
 
-    public function store(Request $request)
+    public function store(StoreSpaceRequest $request)
     {
-        $fields = $request->validate([
-            'name' => 'required|string',
-            'location' => 'required|string',
-            'space_type' => 'required|string|in:podcast,meeting,gallery,workshop',
-            'price_per_hour' => 'required|numeric|min:0',
-            'capacity' => 'required|integer|min:1',
-            'description' => 'required|string',
-            'status' => 'nullable|string|in:Active,Maintenance',
-            'images' => 'nullable|array',
-            'wifi' => 'nullable|boolean',
-            'whiteboard' => 'nullable|boolean',
-            'ac' => 'nullable|boolean',
-            'soundproofing' => 'nullable|boolean',
-            'natural_light' => 'nullable|boolean',
-            'refreshments' => 'nullable|boolean',
-        ]);
+        $fields = $request->validated();
 
         // Standard default image if not provided
         if (empty($fields['images'])) {
@@ -87,7 +68,7 @@ class SpaceController extends Controller
         return response()->json($space, 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSpaceRequest $request, $id)
     {
         $space = Space::find($id);
 
@@ -95,24 +76,7 @@ class SpaceController extends Controller
             return response()->json(['message' => 'Space not found'], 404);
         }
 
-        $fields = $request->validate([
-            'name' => 'sometimes|required|string',
-            'location' => 'sometimes|required|string',
-            'space_type' => 'sometimes|required|string|in:podcast,meeting,gallery,workshop',
-            'price_per_hour' => 'sometimes|required|numeric|min:0',
-            'capacity' => 'sometimes|required|integer|min:1',
-            'description' => 'sometimes|required|string',
-            'status' => 'sometimes|required|string|in:Active,Maintenance',
-            'images' => 'nullable|array',
-            'wifi' => 'nullable|boolean',
-            'whiteboard' => 'nullable|boolean',
-            'ac' => 'nullable|boolean',
-            'soundproofing' => 'nullable|boolean',
-            'natural_light' => 'nullable|boolean',
-            'refreshments' => 'nullable|boolean',
-        ]);
-
-        $space->update($fields);
+        $space->update($request->validated());
 
         return response()->json($space, 200);
     }

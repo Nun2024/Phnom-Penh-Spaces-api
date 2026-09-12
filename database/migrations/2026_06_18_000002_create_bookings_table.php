@@ -24,7 +24,7 @@ return new class extends Migration
             $table->date('booking_date');
             $table->time('start_time');
             $table->time('end_time');
-            $table->json('selected_slots'); // array of slots e.g. ["THU-08:00", "THU-09:00"]
+            $table->json('selected_slots');
             
             $table->decimal('total_price', 10, 2);
             $table->decimal('service_fee', 8, 2)->default(5.00);
