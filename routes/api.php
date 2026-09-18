@@ -7,6 +7,7 @@ use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\SpaceTypeController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AnalyticsController;
 
 // Authentication routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -19,6 +20,15 @@ Route::get('/spaces/{id}/bookings', [SpaceController::class, 'bookings']);
 
 // Public booking creation
 Route::post('/bookings', [BookingController::class, 'store']);
+
+// Analytics Dashboard (Moved out of auth:sanctum temporarily for frontend integration testing)
+Route::prefix('analytics')->group(function () {
+    Route::get('/kpis', [AnalyticsController::class, 'kpis']);
+    Route::get('/trends', [AnalyticsController::class, 'trends']);
+    Route::get('/utilization', [AnalyticsController::class, 'utilization']);
+    Route::get('/heatmap', [AnalyticsController::class, 'heatmap']);
+    Route::get('/spaces-performance', [AnalyticsController::class, 'spacesPerformance']);
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -41,4 +51,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/revenue-weekly', [DashboardController::class, 'weeklyReport']);
     });
 });
-
